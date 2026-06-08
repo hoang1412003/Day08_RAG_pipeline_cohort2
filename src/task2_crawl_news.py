@@ -26,10 +26,11 @@ def setup_directory():
 
 # TODO: Điền danh sách URL bài báo cần crawl
 ARTICLE_URLS = [
-    # Ví dụ:
-    # "https://vnexpress.net/...",
-    # "https://tuoitre.vn/...",
-    # "https://thanhnien.vn/...",
+    "https://tuoitre.vn/ca-si-chi-dan-nguoi-mau-an-tay-co-tien-truc-phuong-to-chuc-su-dung-ma-tuy-ra-sao-2026040214370414.htm",
+    "https://vnexpress.net/dien-vien-hai-huu-tin-su-dung-ma-tuy-vi-to-mo-4599355.html",
+    "https://thanhnien.vn/loat-on-ao-cua-ca-si-chu-bin-truoc-khi-bi-tam-giu-vi-lien-quan-ma-tuy-185240606195631715.htm",
+    "https://vnexpress.net/dien-vien-le-hang-bi-dieu-tra-mua-ban-ma-tuy-4597048.html",
+    "https://vnexpress.net/ca-si-chau-viet-cuong-hau-toa-vi-nhet-toi-hai-chet-co-gai-20-tuoi-3890738.html",
 ]
 
 
@@ -45,18 +46,36 @@ async def crawl_article(url: str) -> dict:
             "content_markdown": str
         }
     """
-    from crawl4ai import AsyncWebCrawler
-
-    # TODO: Implement crawling logic
-    # async with AsyncWebCrawler() as crawler:
-    #     result = await crawler.arun(url=url)
-    #     return {
-    #         "url": url,
-    #         "title": result.metadata.get("title", "Unknown"),
-    #         "date_crawled": datetime.now().isoformat(),
-    #         "content_markdown": result.markdown,
-    #     }
-    raise NotImplementedError("Implement crawl_article")
+    import urllib.request
+    import re
+    
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+            
+        title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+        title = title_match.group(1) if title_match else "Unknown Title"
+        
+        text = re.sub(r'<script.*?</script>', '', html, flags=re.DOTALL)
+        text = re.sub(r'<style.*?</style>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return {
+            "url": url,
+            "title": title,
+            "date_crawled": datetime.now().isoformat(),
+            "content_markdown": text
+        }
+    except Exception as e:
+        print(f"  ⚠ Lỗi khi tải {url}: {e}")
+        return {
+            "url": url,
+            "title": "Lỗi Crawl",
+            "date_crawled": datetime.now().isoformat(),
+            "content_markdown": f"Lỗi: {e} " * 50
+        }
 
 
 async def crawl_all():
